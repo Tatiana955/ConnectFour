@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Connect Four</string>
+
+    <string name="names_of_players">Names of the players</string>
+    <string name="enter_name">Enter name</string>
+    <string name="name_of_first">First player\'s name</string>
+    <string name="name_of_second">Second player\'s name</string>
+
+    <string name="board_size">Board size</string>
+    <string name="game_mode">Game mode</string>
+    <string name="number_of_rounds">Number of rounds</string>
+
+    <string name="icon_account_circle">Account circle icon</string>
+    <string name="icon_clear">Clear icon</string>
+    <string name="icon_done">Done icon</string>
+    <string name="icon_play_arrow">Play arrow icon</string>
+</resources>
