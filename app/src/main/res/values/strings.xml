@@ -14,4 +14,8 @@
     <string name="icon_clear">Clear icon</string>
     <string name="icon_done">Done icon</string>
     <string name="icon_play_arrow">Play arrow icon</string>
+
+    <string name="decrease_count">Decrease count</string>
+    <string name="clear_count">Clear count</string>
+    <string name="increase_count">Increase count</string>
 </resources>

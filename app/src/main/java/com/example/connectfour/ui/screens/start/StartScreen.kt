@@ -20,9 +20,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.connectfour.R
+import com.example.connectfour.domain.util.CounterStatus
 import com.example.connectfour.domain.util.GameMode
 import com.example.connectfour.domain.util.VisibilityStatus
 import com.example.connectfour.ui.screens.AppViewModel
+import com.example.connectfour.ui.screens.components.CounterButton
 import com.example.connectfour.ui.screens.components.Section
 
 @Composable
@@ -51,10 +53,12 @@ private fun Content(
     startGame: () -> Unit
 ) {
     val fabVisibility = remember { viewModel.fabVisibility }
+
     val firstPlayer = remember { viewModel.firstPlayer }
     val secondPlayer = remember { viewModel.secondPlayer }
-    val mapOfBoardSizes = remember { viewModel.mapOfBoardSizes }
-    val boardSizesList = remember { mapOfBoardSizes }.keys.toList()
+
+    val mapOfBoardSizes = remember { viewModel.mapOfBoardSizes }.value
+    val boardSizesList = remember { mapOfBoardSizes.keys }.toList()
 
     Box(
         modifier = modifier
@@ -100,16 +104,20 @@ private fun Content(
             ) {
                 BoxOfBoardSizes(
                     modifier = modifier,
-                    viewModel = viewModel,
                     mapOfBoardSizes = mapOfBoardSizes,
-                    boardSizeList = boardSizesList.subList(0, 3)
+                    boardSizeList = boardSizesList.subList(0, 3),
+                    choiceBoardSize = { key, value ->
+                        viewModel.choiceBoardSize(key, value)
+                    }
                 )
 
                 BoxOfBoardSizes(
                     modifier = modifier,
-                    viewModel = viewModel,
                     mapOfBoardSizes = mapOfBoardSizes,
-                    boardSizeList = boardSizesList.subList(3, boardSizesList.size - 1)
+                    boardSizeList = boardSizesList.subList(3, boardSizesList.size - 1),
+                    choiceBoardSize = { key, value ->
+                        viewModel.choiceBoardSize(key, value)
+                    }
                 )
             }
 
@@ -120,9 +128,9 @@ private fun Content(
             ) {
                 BoardSizeItem(
                     modifier = modifier,
-                    viewModel = viewModel,
                     boardSize = boardSizesList.last(),
-                    isSelected = mapOfBoardSizes[boardSizesList.last()]!!
+                    isSelected = mapOfBoardSizes[boardSizesList.last()]!!,
+                    choiceBoardSize = { viewModel.choiceBoardSize(boardSizesList.last(), it) }
                 )
             }
 
@@ -143,8 +151,8 @@ private fun Content(
             modifier = modifier
                 .padding(all = 10.dp)
                 .align(Alignment.BottomEnd),
-            viewModel = viewModel,
             visibility = fabVisibility.value,
+            getBoardSize = { viewModel.getBoardSize(it) },
             startGame = startGame
         )
     }
@@ -209,32 +217,36 @@ private fun TextFieldName(
 @Composable
 private fun BoxOfBoardSizes(
     modifier: Modifier,
-    viewModel: AppViewModel,
     mapOfBoardSizes: MutableMap<String, Boolean>,
-    boardSizeList: List<String>
+    boardSizeList: List<String>,
+    choiceBoardSize: (String, Boolean) -> Unit,
 ) {
+    val fbs = boardSizeList[0]
+    val sbs = boardSizeList[1]
+    val tbs = boardSizeList[2]
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         BoardSizeItem(
             modifier = modifier,
-            viewModel = viewModel,
-            boardSize = boardSizeList[0],
-            isSelected = mapOfBoardSizes[boardSizeList[0]]!!
+            boardSize = fbs,
+            isSelected = mapOfBoardSizes[fbs]!!,
+            choiceBoardSize = { choiceBoardSize(fbs, it) }
         )
 
         BoardSizeItem(
             modifier = modifier,
-            viewModel = viewModel,
-            boardSize = boardSizeList[1],
-            isSelected = mapOfBoardSizes[boardSizeList[1]]!!
+            boardSize = sbs,
+            isSelected = mapOfBoardSizes[sbs]!!,
+            choiceBoardSize = { choiceBoardSize(sbs, it) }
         )
 
         BoardSizeItem(
             modifier = modifier,
-            viewModel = viewModel,
-            boardSize = boardSizeList[2],
-            isSelected = mapOfBoardSizes[boardSizeList[2]]!!
+            boardSize = tbs,
+            isSelected = mapOfBoardSizes[tbs]!!,
+            choiceBoardSize = { choiceBoardSize(tbs, it) }
         )
     }
 }
@@ -243,9 +255,9 @@ private fun BoxOfBoardSizes(
 @Composable
 private fun BoardSizeItem(
     modifier: Modifier,
-    viewModel: AppViewModel,
     boardSize: String,
-    isSelected: Boolean
+    isSelected: Boolean,
+    choiceBoardSize: (Boolean) -> Unit
 ) {
     var selected by remember { mutableStateOf(isSelected) }
 
@@ -255,7 +267,7 @@ private fun BoardSizeItem(
         selected = selected,
         onClick = {
             selected = !selected
-            viewModel.choiceBoardSize(boardSize, selected)
+            choiceBoardSize(selected)
         },
         label = { Text(text = boardSize) },
         leadingIcon = {
@@ -293,24 +305,26 @@ private fun GameMode(
     ) {
         LabelledCheckBox(
             modifier = modifier,
-            viewModel = viewModel,
             checked = single.value,
             onCheckedChange = {
                 single.value = it
                 multiple.value = false
             },
-            gameMode = GameMode.SINGLE
+            fabVisibility = { viewModel.fabVisibility(it) },
+            changeGameMode = { viewModel.changeGameMode(GameMode.SINGLE, it) },
+            gameMode = GameMode.SINGLE.mode
         )
 
         LabelledCheckBox(
             modifier = modifier,
-            viewModel = viewModel,
             checked = multiple.value,
             onCheckedChange = {
                 multiple.value = it
                 single.value = false
             },
-            gameMode = GameMode.MULTI
+            fabVisibility = { viewModel.fabVisibility(it) },
+            changeGameMode = { viewModel.changeGameMode(GameMode.MULTI, it) },
+            gameMode = GameMode.MULTI.mode
         )
     }
 
@@ -319,7 +333,8 @@ private fun GameMode(
     if (multiple.value) {
         NumberOfRounds(
             modifier = modifier,
-            viewModel = viewModel
+            numberOfRounds = viewModel.numberOfRounds,
+            saveNumberOfRounds = { viewModel.saveNumberOfRounds(it) }
         )
     }
 }
@@ -327,10 +342,11 @@ private fun GameMode(
 @Composable
 private fun LabelledCheckBox(
     modifier: Modifier,
-    viewModel: AppViewModel,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    gameMode: GameMode
+    fabVisibility: (VisibilityStatus) -> Unit,
+    changeGameMode: (Boolean) -> Unit,
+    gameMode: String
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -344,10 +360,10 @@ private fun LabelledCheckBox(
                 onClick = {
                     onCheckedChange(!checked)
                     when (checked) {
-                        true -> viewModel.fabVisibility(VisibilityStatus.Invisible)
-                        false -> viewModel.fabVisibility(VisibilityStatus.Visible)
+                        true -> fabVisibility(VisibilityStatus.Invisible)
+                        false -> fabVisibility(VisibilityStatus.Visible)
                     }
-                    viewModel.changeGameMode(gameMode, !checked)
+                    changeGameMode(!checked)
                 }
             )
             .requiredHeight(ButtonDefaults.MinHeight)
@@ -360,15 +376,18 @@ private fun LabelledCheckBox(
 
         Spacer(Modifier.size(6.dp))
 
-        Text(text = gameMode.mode)
+        Text(text = gameMode)
     }
 }
 
 @Composable
 private fun NumberOfRounds(
     modifier: Modifier,
-    viewModel: AppViewModel
+    numberOfRounds: MutableState<Int>,
+    saveNumberOfRounds: (CounterStatus) -> Unit
 ) {
+    val valueCounter by remember { numberOfRounds }
+
     Column(
         modifier = Modifier.wrapContentSize(),
         verticalArrangement = Arrangement.Center,
@@ -379,15 +398,27 @@ private fun NumberOfRounds(
             text = stringResource(R.string.number_of_rounds)
         )
 
-        // Counter Button
+        CounterButton(
+            modifier = modifier,
+            value = valueCounter.toString(),
+            onValueIncreaseClick = {
+                saveNumberOfRounds(CounterStatus.Increase)
+            },
+            onValueDecreaseClick = {
+                saveNumberOfRounds(CounterStatus.Decrease)
+            },
+            onValueClearClick = {
+                saveNumberOfRounds(CounterStatus.Clear)
+            }
+        )
     }
 }
 
 @Composable
 private fun StartButton(
     modifier: Modifier,
-    viewModel: AppViewModel,
     visibility: Boolean,
+    getBoardSize: (Color) -> Unit,
     startGame: () -> Unit
 ) {
     val startColor = MaterialTheme.colorScheme.outline
@@ -398,7 +429,7 @@ private fun StartButton(
     ) {
         FloatingActionButton(
             onClick = {
-                viewModel.getBoardSize(startColor)
+                getBoardSize(startColor)
                 startGame()
             },
             modifier = modifier,
