@@ -10,8 +10,14 @@ import com.example.connectfour.domain.util.*
 import com.example.connectfour.domain.util.CounterStatus
 import com.example.connectfour.domain.util.GameMode
 import com.example.connectfour.domain.util.VisibilityStatus
+import com.example.connectfour.usecases.UseCases
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class AppViewModel : ViewModel() {
+@HiltViewModel
+class AppViewModel @Inject constructor(
+    private val useCases: UseCases
+) : ViewModel() {
 
     private val _firstPlayer = mutableStateOf(Player(color = Color.Red))
     val firstPlayer: MutableState<Player> = _firstPlayer
@@ -22,28 +28,29 @@ class AppViewModel : ViewModel() {
     private val _currentPlayer = mutableStateOf(Player())
     val currentPlayer: MutableState<Player> = _currentPlayer
 
-    private val _mapOfBoardSizes = mutableStateMapOf(
-        Constants.BoardSize.BOARD_SIZE_MIN to false,
-        Constants.BoardSize.BOARD_SIZE_SMALL to false,
-        Constants.BoardSize.BOARD_SIZE_NORMAL to false,
-        Constants.BoardSize.BOARD_SIZE_MEDIUM to false,
-        Constants.BoardSize.BOARD_SIZE_LARGE to false,
-        Constants.BoardSize.BOARD_SIZE_EXTRA_LARGE to false,
-        Constants.BoardSize.BOARD_SIZE_MAX to false
+    @SuppressLint("MutableCollectionMutableState")
+    private val _mapOfBoardSizes = mutableStateOf(
+        mutableMapOf(
+            Constants.BoardSize.BOARD_SIZE_MIN to false,
+            Constants.BoardSize.BOARD_SIZE_SMALL to false,
+            Constants.BoardSize.BOARD_SIZE_NORMAL to false,
+            Constants.BoardSize.BOARD_SIZE_MEDIUM to false,
+            Constants.BoardSize.BOARD_SIZE_LARGE to false,
+            Constants.BoardSize.BOARD_SIZE_EXTRA_LARGE to false,
+            Constants.BoardSize.BOARD_SIZE_MAX to false
+        )
     )
-    val mapOfBoardSizes: SnapshotStateMap<String, Boolean> = _mapOfBoardSizes
+    val mapOfBoardSizes: MutableState<MutableMap<String, Boolean>> = _mapOfBoardSizes
 
     @SuppressLint("MutableCollectionMutableState")
     private val listOfSelectedBoardSizes = mutableStateOf(mutableSetOf<String>())
 
-    private val _boardSize = mutableStateOf(Constants.BoardSize.BOARD_SIZE_NORMAL)
-    val boardSize: MutableState<String> = _boardSize
+    private val boardSize = mutableStateOf(Constants.BoardSize.BOARD_SIZE_NORMAL)
 
-    private val _columnCount = mutableIntStateOf(_boardSize.value.first().digitToInt())
+    private val _columnCount = mutableIntStateOf(boardSize.value.first().digitToInt())
     val columnCount: MutableState<Int> = _columnCount
 
-    private val _rowCount = mutableIntStateOf(_boardSize.value.last().digitToInt())
-    val rowCount: MutableState<Int> = _rowCount
+    private val rowCount = mutableIntStateOf(boardSize.value.last().digitToInt())
 
     private val _gameModes = mutableStateMapOf(
         GameMode.SINGLE to false,
@@ -61,8 +68,23 @@ class AppViewModel : ViewModel() {
     val fabVisibility: MutableState<Boolean> = _fabVisibility
 
     @SuppressLint("MutableCollectionMutableState")
-    private val _listOfCoord = mutableStateOf(mutableMapOf<Pair<Int, Int>, Color>())
-    val listOfCoord: MutableState<MutableMap<Pair<Int, Int>, Color>> = _listOfCoord
+    private val listOfCoord = mutableStateOf(mutableMapOf<Pair<Int, Int>, Color>())
+    val listOfColors: MutableCollection<Color> = listOfCoord.value.values
+
+    private val _statistic = mutableStateMapOf<String, Int>()
+    val statistic: SnapshotStateMap<String, Int> = _statistic
+
+    private val _showSnackbar = mutableStateOf(false)
+    val showSnackbar: MutableState<Boolean> = _showSnackbar
+
+    private val _showSheet = mutableStateOf(false)
+    val showSheet: MutableState<Boolean> = _showSheet
+
+    private val _showDialog = mutableStateOf(false)
+    val showDialog: MutableState<Boolean> = _showDialog
+
+    private val _message = mutableStateOf("")
+    val message: MutableState<String> = _message
 
     fun save1st(name: String) {
         _firstPlayer.value = Player(
@@ -79,50 +101,65 @@ class AppViewModel : ViewModel() {
     }
 
     fun choiceBoardSize(key: String, value: Boolean) {
-        _mapOfBoardSizes[key] = value
+        _mapOfBoardSizes.value[key] = value
     }
 
     fun getBoardSize(color: Color) {
+        initialValues()
         fillListOfSelectedBoardSizes()
-        if (listOfSelectedBoardSizes.value.isNotEmpty()) {
+        boardSize.value = if (listOfSelectedBoardSizes.value.isNotEmpty()) {
             if (listOfSelectedBoardSizes.value.size > 1) {
-                _boardSize.value = listOfSelectedBoardSizes.value.random()
+                listOfSelectedBoardSizes.value.random()
             } else {
-                _boardSize.value = listOfSelectedBoardSizes.value.first()
+                listOfSelectedBoardSizes.value.first()
             }
         } else {
-            _boardSize.value = Constants.BoardSize.BOARD_SIZE_NORMAL
+            Constants.BoardSize.BOARD_SIZE_NORMAL
         }
-        _currentPlayer.value = _firstPlayer.value
         getColumnCount()
         getRowCount()
         fillOutListOfCoord(color)
     }
 
+    private fun initialValues() {
+        if (_showSheet.value) hideSheet()
+        if (_showSnackbar.value) _showSnackbar.value = false
+        if (_firstPlayer.value.score > 0) _firstPlayer.value.score = 0
+        if (_secondPlayer.value.score > 0) _secondPlayer.value.score = 0
+        _currentPlayer.value = _firstPlayer.value
+        if (_selectedGameMode.value == GameMode.MULTI && _numberOfRounds.intValue == 0) {
+            _numberOfRounds.intValue = 3
+        }
+    }
+
+    fun hideSheet() {
+        _showSheet.value = false
+    }
+
     private fun fillListOfSelectedBoardSizes() {
-        for ((key, value) in _mapOfBoardSizes) {
+        for ((key, value) in _mapOfBoardSizes.value) {
             if (value) listOfSelectedBoardSizes.value.add(key)
             if (!value) listOfSelectedBoardSizes.value.remove(key)
         }
     }
 
     private fun getColumnCount() {
-        _columnCount.intValue = if (_boardSize.value.length > 5) {
-            "${_boardSize.value[0]}${_boardSize.value[1]}".toInt()
+        _columnCount.intValue = if (boardSize.value.length > 5) {
+            "${boardSize.value[0]}${boardSize.value[1]}".toInt()
         } else {
-            _boardSize.value.first().digitToInt()
+            boardSize.value.first().digitToInt()
         }
     }
 
     private fun getRowCount() {
-        _rowCount.intValue = _boardSize.value.last().digitToInt()
+        rowCount.intValue = boardSize.value.last().digitToInt()
     }
 
     private fun fillOutListOfCoord(color: Color) {
-        _listOfCoord.value.clear()
-        for (row in 1.._rowCount.intValue) {
+        listOfCoord.value.clear()
+        for (row in 1..rowCount.intValue) {
             for (col in 1.._columnCount.intValue) {
-                _listOfCoord.value[Pair(row, col)] = color
+                listOfCoord.value[Pair(row, col)] = color
             }
         }
     }
@@ -145,19 +182,139 @@ class AppViewModel : ViewModel() {
     }
 
     fun saveNumberOfRounds(status: CounterStatus) {
-        when (status) {
-            CounterStatus.Increase -> _numberOfRounds.intValue += 1
-            CounterStatus.Decrease -> _numberOfRounds.intValue =
-                maxOf(_numberOfRounds.intValue - 1, 0)
-
-            CounterStatus.Clear -> _numberOfRounds.intValue = 0
+        _numberOfRounds.intValue = when (status) {
+            CounterStatus.Increase -> _numberOfRounds.intValue + 1
+            CounterStatus.Decrease -> maxOf(_numberOfRounds.intValue - 1, 0)
+            CounterStatus.Clear -> 0
         }
     }
 
     fun fabVisibility(status: VisibilityStatus) {
-        when (status) {
-            VisibilityStatus.Visible -> _fabVisibility.value = true
-            VisibilityStatus.Invisible -> _fabVisibility.value = false
+        _fabVisibility.value = when (status) {
+            VisibilityStatus.Visible -> true
+            VisibilityStatus.Invisible -> false
+        }
+    }
+
+    fun showDialog(isShow: Boolean) {
+        _showDialog.value = isShow
+    }
+
+    fun clearBoard(startColor: Color) {
+        for (k in listOfCoord.value.filter { it.value != startColor }.keys) {
+            listOfCoord.value.replace(k, startColor)
+        }
+    }
+
+    fun turnOfPlayer(column: Int, startColor: Color) {
+        if (_showSnackbar.value) _showSnackbar.value = false
+        when (turn(column, startColor)) {
+            PlayerTurnStatus.FullColumn -> {
+                _showSnackbar.value = true
+                _message.value = "${PlayerTurnStatus.FullColumn}"
+            }
+
+            PlayerTurnStatus.FullField -> score(PlayerTurnStatus.FullField)
+            PlayerTurnStatus.Success -> changeCurrentPlayer()
+            PlayerTurnStatus.WinningRound -> score(PlayerTurnStatus.WinningRound)
+            PlayerTurnStatus.ItIsDraw -> score(PlayerTurnStatus.ItIsDraw)
+            PlayerTurnStatus.WinningGame -> {
+                score(PlayerTurnStatus.WinningGame)
+                playerWins()
+            }
+        }
+    }
+
+    private fun turn(column: Int, startColor: Color): PlayerTurnStatus {
+        val filtered = listOfCoord.value.filter {
+            it.key.second == column && it.value == startColor
+        }
+
+        val row = getNumberOfRow(filtered)
+
+        if (row == 0) {
+            return PlayerTurnStatus.FullColumn
+        }
+
+        for (k in filtered.keys) {
+            if (listOfCoord.value[k] == startColor) {
+                changeColor(row, k.second, _currentPlayer.value.color)
+                break
+            }
+        }
+
+        if (!isWin()) {
+            if (listOfColors.none { it == startColor }) {
+                _numberOfRounds.intValue -= 1
+                if (_numberOfRounds.intValue == 0 && isItDraw()) {
+                    return PlayerTurnStatus.ItIsDraw
+                }
+                return PlayerTurnStatus.FullField
+            }
+            return PlayerTurnStatus.Success
+        }
+
+        return when (_selectedGameMode.value) {
+            GameMode.SINGLE -> PlayerTurnStatus.WinningGame
+            else -> {
+                _numberOfRounds.intValue -= 1
+                _currentPlayer.value.score += 1
+
+                if (_numberOfRounds.intValue > 0) {
+                    PlayerTurnStatus.WinningRound
+                } else {
+                    if (isItDraw()) {
+                        PlayerTurnStatus.ItIsDraw
+                    } else {
+                        PlayerTurnStatus.WinningGame
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getNumberOfRow(filtered: Map<Pair<Int, Int>, Color>): Int {
+        return if (filtered.isEmpty()) 0 else filtered.maxOf { it.key.first }
+    }
+
+    private fun changeColor(row: Int, col: Int, newColor: Color) {
+        listOfCoord.value[Pair(row, col)] = newColor
+    }
+
+    private fun isWin(): Boolean {
+        return useCases.checkWinUseCase.invoke(
+            rows = rowCount.intValue,
+            columns = _columnCount.intValue,
+            list = listOfCoord.value,
+            player = _currentPlayer.value
+        )
+    }
+
+    private fun isItDraw(): Boolean {
+        return _firstPlayer.value.score == _secondPlayer.value.score
+    }
+
+    private fun score(status: PlayerTurnStatus) {
+        _showSheet.value = true
+        _statistic[_firstPlayer.value.name] = _firstPlayer.value.score
+        _statistic[_secondPlayer.value.name] = _secondPlayer.value.score
+        _message.value = status.getState(_currentPlayer.value.name)
+        changeCurrentPlayer()
+    }
+
+    private fun changeCurrentPlayer() {
+        _currentPlayer.value = if (_currentPlayer.value == _firstPlayer.value) {
+            _secondPlayer.value
+        } else {
+            _firstPlayer.value
+        }
+    }
+
+    private fun playerWins() {
+        _currentPlayer.value = if (_firstPlayer.value.score > _secondPlayer.value.score) {
+            _firstPlayer.value
+        } else {
+            _secondPlayer.value
         }
     }
 }
