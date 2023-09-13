@@ -2,9 +2,9 @@ package com.example.connectfour.navigation
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.connectfour.ui.screens.AppViewModel
 import com.example.connectfour.ui.screens.game.GameScreen
 import com.example.connectfour.ui.screens.start.StartScreen
@@ -12,9 +12,10 @@ import com.example.connectfour.ui.screens.start.StartScreen
 @Composable
 fun NavGraph(
     paddingValues: PaddingValues,
-    navController: NavHostController,
     viewModel: AppViewModel
 ) {
+    val navController = rememberNavController()
+
     NavHost(
         navController = navController,
         startDestination = NavItems.StartScreen.route

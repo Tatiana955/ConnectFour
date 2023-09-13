@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -143,7 +144,13 @@ private fun Content(
 
             GameMode(
                 modifier = modifier,
-                viewModel = viewModel
+                gameModes = viewModel.gameModes,
+                fabVisibility = { viewModel.fabVisibility(it) },
+                changeGameMode = { mode, checked ->
+                    viewModel.changeGameMode(mode, checked)
+                },
+                numberOfRounds = viewModel.numberOfRounds,
+                saveNumberOfRounds = { viewModel.saveNumberOfRounds(it) }
             )
         }
 
@@ -291,12 +298,14 @@ private fun BoardSizeItem(
 @Composable
 private fun GameMode(
     modifier: Modifier,
-    viewModel: AppViewModel
+    gameModes: SnapshotStateMap<GameMode, Boolean>,
+    fabVisibility: (VisibilityStatus) -> Unit,
+    changeGameMode: (GameMode, Boolean) -> Unit,
+    numberOfRounds: MutableState<Int>,
+    saveNumberOfRounds: (CounterStatus) -> Unit
 ) {
-    val mode = remember { viewModel.gameModes }
-
-    val single = remember { mutableStateOf(mode[GameMode.SINGLE]!!) }
-    val multiple = remember { mutableStateOf(mode[GameMode.MULTI]!!) }
+    val single = remember { mutableStateOf(gameModes[GameMode.SINGLE]!!) }
+    val multiple = remember { mutableStateOf(gameModes[GameMode.MULTI]!!) }
 
     Row(
         modifier = modifier
@@ -310,9 +319,9 @@ private fun GameMode(
                 single.value = it
                 multiple.value = false
             },
-            fabVisibility = { viewModel.fabVisibility(it) },
-            changeGameMode = { viewModel.changeGameMode(GameMode.SINGLE, it) },
-            gameMode = GameMode.SINGLE.mode
+            fabVisibility = { fabVisibility(it) },
+            changeGameMode = { changeGameMode(GameMode.SINGLE, it) },
+            gameMode = "${GameMode.SINGLE}"
         )
 
         LabelledCheckBox(
@@ -322,9 +331,9 @@ private fun GameMode(
                 multiple.value = it
                 single.value = false
             },
-            fabVisibility = { viewModel.fabVisibility(it) },
-            changeGameMode = { viewModel.changeGameMode(GameMode.MULTI, it) },
-            gameMode = GameMode.MULTI.mode
+            fabVisibility = { fabVisibility(it) },
+            changeGameMode = { changeGameMode(GameMode.MULTI, it) },
+            gameMode = "${GameMode.MULTI}"
         )
     }
 
@@ -333,8 +342,8 @@ private fun GameMode(
     if (multiple.value) {
         NumberOfRounds(
             modifier = modifier,
-            numberOfRounds = viewModel.numberOfRounds,
-            saveNumberOfRounds = { viewModel.saveNumberOfRounds(it) }
+            numberOfRounds = numberOfRounds,
+            saveNumberOfRounds = { saveNumberOfRounds(it) }
         )
     }
 }
