@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Connect Four</string>
 
+    <string name="start_screen">Start screen.</string>
+    <string name="game_screen">Game screen.</string>
+
     <string name="names_of_players">Names of the players</string>
     <string name="enter_name">Enter name</string>
     <string name="name_of_first">First player\'s name</string>
@@ -10,12 +13,26 @@
     <string name="game_mode">Game mode</string>
     <string name="number_of_rounds">Number of rounds</string>
 
+    <string name="score">Score</string>
+    <string name="selected_game_mode">%1s play</string>
+    <string name="number_of_rounds_remaining">%1s rounds remained</string>
+    <string name="turn_of_player">Turn of %1s</string>
+
     <string name="icon_account_circle">Account circle icon</string>
     <string name="icon_clear">Clear icon</string>
     <string name="icon_done">Done icon</string>
     <string name="icon_play_arrow">Play arrow icon</string>
+    <string name="icon_close">Close</string>
+
+    <string name="image_connect_four">Connect four</string>
 
     <string name="decrease_count">Decrease count</string>
     <string name="clear_count">Clear count</string>
     <string name="increase_count">Increase count</string>
+
+    <string name="objective">Objective</string>
+    <string name="rules">The first player to get four of the same color discs in a row in any
+        direction wins.
+    </string>
+
 </resources>
